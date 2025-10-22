@@ -1,4 +1,13 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { filter, shareReplay, switchMap, tap } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -17,7 +26,7 @@ import { IPageHeaderControl } from '../../core/services/page-header-controls/pag
   styleUrls: ['./doc-view.component.scss'],
   imports: [AnnotationComponent],
   providers: [DocViewService],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly activatedRoute = inject(ActivatedRoute);
@@ -42,23 +51,26 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   public annotations = signal<Annotation[]>([]);
   public editing = signal<boolean>(false);
 
-  public baseHeights = signal<Record<number, number>>({});
+  public baseSizes = signal<Record<number, { width: number; height: number }>>({});
 
   public containerRects = computed(() => {
     const z = this.zoom();
     const rects: IContainerRect = {};
-    const pages = this.document()!.pages;
     const containers = window.document.querySelectorAll<HTMLElement>('.document-page-container');
 
-    containers.forEach((el, index) => {
-      const elRect = el.getBoundingClientRect();
-      rects[pages[index].pageNumber] = {
-        left: elRect.left,
-        top: elRect.top,
-        width: elRect.width / Math.max(0.0001, z),
-        height: elRect.height / Math.max(0.0001, z),
-        right: elRect.right,
-        bottom: elRect.bottom,
+    containers.forEach((el) => {
+      const pageNumAttr = el.dataset['pageNumber'];
+      const pageNumber = pageNumAttr ? Number(pageNumAttr) : undefined;
+      if (!pageNumber) return;
+      const measured = el.getBoundingClientRect();
+      const base = this.baseSizes()[pageNumber];
+      rects[pageNumber] = {
+        left: measured.left,
+        top: measured.top,
+        width: base?.width ?? measured.width / Math.max(0.0001, z),
+        height: base?.height ?? measured.height / Math.max(0.0001, z),
+        right: measured.right,
+        bottom: measured.bottom,
       } as DOMRect;
     });
 
@@ -69,27 +81,27 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly docViewControls: IPageHeaderControl[] = [
     {
-      type: "span",
+      type: 'span',
       content: computed(() => {
         const res = Math.round(this.zoom() * 100).toString();
         return res;
-      })
+      }),
     },
     {
-      type: "button",
-      content: signal("+"),
-      onClick: () => this.zoomIn()
+      type: 'button',
+      content: signal('+'),
+      onClick: () => this.zoomIn(),
     },
     {
-      type: "button",
-      content: signal("-"),
-      onClick: () => this.zoomOut()
+      type: 'button',
+      content: signal('-'),
+      onClick: () => this.zoomOut(),
     },
     {
-      type: "button",
-      content: signal("Save"),
-      onClick: () => this.saveAnnotations()
-    }
+      type: 'button',
+      content: signal('Save'),
+      onClick: () => this.saveAnnotations(),
+    },
   ];
 
   public ngOnInit(): void {
@@ -97,7 +109,7 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public ngAfterViewInit(): void {
-    // initial calculation and watch resize to keep base heights correct
+    // initial calculation and watch resize to keep base sizes correct
     setTimeout(() => this.recomputeBaseHeights(), 0);
     window.addEventListener('resize', this.resizeHandler);
   }
@@ -119,25 +131,32 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   public onImageLoad(pageNumber: number, ev: Event): void {
     const img = ev.target as HTMLImageElement | null;
     if (!img) return;
-    const renderedWidth = img.clientWidth;
-    if (renderedWidth <= 0 || !img.naturalWidth) return;
-    const renderedHeight = (img.naturalHeight / img.naturalWidth) * renderedWidth;
-    this.baseHeights.update(h => ({ ...h, [pageNumber]: renderedHeight }));
+    const z = Math.max(0.0001, this.zoom());
+    const clientW = img.clientWidth || img.naturalWidth || 800;
+    const clientH = img.clientHeight || img.naturalHeight || 1100;
+    const baseW = Math.max(1, clientW / z);
+    const baseH = Math.max(1, clientH / z);
+    this.baseSizes.update((s) => ({ ...s, [pageNumber]: { width: baseW, height: baseH } }));
+    setTimeout(() => this.recomputeBaseHeights(), 0);
   }
 
   private recomputeBaseHeights(): void {
-    const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('.document-page-container img.page-image'));
-    const next: Record<number, number> = { ...this.baseHeights() };
-    imgs.forEach(img => {
+    const imgs = Array.from(
+      document.querySelectorAll<HTMLImageElement>('.document-page-container img.page-image')
+    );
+    const nextBase: Record<number, { width: number; height: number }> = { ...this.baseSizes() };
+    imgs.forEach((img) => {
       const container = img.closest('.document-page-container') as HTMLElement | null;
       const pageNumAttr = container?.dataset['pageNumber'];
       const pageNumber = pageNumAttr ? Number(pageNumAttr) : undefined;
       if (!pageNumber) return;
-      if (!img.naturalWidth || img.clientWidth === 0) return;
-      const h = (img.naturalHeight / img.naturalWidth) * img.clientWidth;
-      next[pageNumber] = h;
+      if (!img.naturalWidth) return;
+      const z = Math.max(0.0001, this.zoom());
+      const clientW = img.clientWidth || img.naturalWidth || 800;
+      const clientH = img.clientHeight || img.naturalHeight || 1100;
+      nextBase[pageNumber] = { width: Math.max(1, clientW / z), height: Math.max(1, clientH / z) };
     });
-    this.baseHeights.set(next);
+    this.baseSizes.set(nextBase);
   }
 
   public getPageAnnotations(pageNumber: number) {
@@ -169,8 +188,9 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
     const id = crypto.randomUUID();
     const container = (event.target as HTMLElement).closest('.document-page-container')!;
     const containerRect = container.getBoundingClientRect();
-    const x = (event.clientX - containerRect.left) / this.zoom();
-    const y = (event.clientY - containerRect.top) / this.zoom();
+    const z = Math.max(0.0001, this.zoom());
+    const x = (event.clientX - containerRect.left) / z;
+    const y = (event.clientY - containerRect.top) / z;
 
     const newAnnotation: ITextAnnotation = {
       id,
@@ -182,6 +202,18 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
     };
 
     this.annotations.update((annotations) => [...annotations, newAnnotation]);
+  }
+
+  public onAnnotationMove(payload: { id: string; x: number; y: number }): void {
+    this.annotations.update((arr) =>
+      arr.map((a) => (a.id === payload.id ? { ...a, x: payload.x, y: payload.y } : a))
+    );
+  }
+
+  public onAnnotationUpdate(updated: ITextAnnotation): void {
+    this.annotations.update((arr) =>
+      arr.map((a) => (a.id === updated.id ? { ...a, ...(updated as ITextAnnotation) } : a))
+    );
   }
 
   public isEditing(flag: boolean): void {

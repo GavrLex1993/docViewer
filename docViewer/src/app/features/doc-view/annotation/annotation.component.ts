@@ -19,6 +19,8 @@ export class AnnotationComponent {
   public containerRect = input.required<DOMRect>();
 
   public onDelete = output<string>();
+  public onMove = output<{ id: string; x: number; y: number }>();
+  public onUpdate = output<Annotation>();
   public isEditing = output<boolean>();
 
   public annotationEditRef = viewChild<ElementRef<HTMLInputElement>>("annotationedit");
@@ -27,6 +29,7 @@ export class AnnotationComponent {
 
   protected dragging = false;
   private dragOffset = { x: 0, y: 0 };
+  private captureEl?: HTMLElement;
 
   public startDrag(event: PointerEvent): void {
     if (this.editing()) return;
@@ -34,33 +37,58 @@ export class AnnotationComponent {
     event.preventDefault();
     this.dragging = true;
 
-    const pointerX = (event.clientX - this.containerRect().left) / this.zoom();
-    const pointerY = (event.clientY - this.containerRect().top) / this.zoom();
+  const container = this.containerRect() ?? (event.currentTarget as HTMLElement).closest('.document-page-container')?.getBoundingClientRect();
+  if (!container) return;
+  const z = Math.max(0.0001, this.zoom());
 
-    const an = this.annotation();
-    this.dragOffset.x = pointerX - an.x;
-    this.dragOffset.y = pointerY - an.y;
+  const pointerBaseX = (event.clientX - container.left) / z;
+  const pointerBaseY = (event.clientY - container.top) / z;
+
+  const an = this.annotation();
+    this.dragOffset.x = pointerBaseX - (an.x ?? 0);
+    this.dragOffset.y = pointerBaseY - (an.y ?? 0);
+
+    const target = event.currentTarget as Element;
+    try { target.setPointerCapture?.(event.pointerId); this.captureEl = target as HTMLElement; } catch { this.captureEl = undefined; }
 
     window.addEventListener('pointermove', this.onDragMove);
     window.addEventListener('pointerup', this.endDrag);
+    this.isEditing.emit(false);
   }
 
   public onDragMove = (event: PointerEvent) => {
     if (!this.dragging) return;
+    const container = this.containerRect();
+    if (!container) return;
+    const z = Math.max(0.0001, this.zoom());
 
-    const x = (event.clientX - this.containerRect().left) / this.zoom() - this.dragOffset.x;
-    const y = (event.clientY - this.containerRect().top) / this.zoom() - this.dragOffset.y;
+    const pointerBaseX = (event.clientX - container.left) / z;
+    const pointerBaseY = (event.clientY - container.top) / z;
 
-    this.annotation.update(an => ({
-      ...an,
-      x,
-      y
-    }));
+    let desiredX = pointerBaseX - this.dragOffset.x;
+    let desiredY = pointerBaseY - this.dragOffset.y;
+
+    const el = this.captureEl ?? (event.currentTarget as HTMLElement | null);
+    const elRect = el?.getBoundingClientRect();
+
+    const elWbase = (elRect?.width ?? 0) / z;
+    const elHbase = (elRect?.height ?? 0) / z;
+
+    const maxX = Math.max(0, container.width - elWbase);
+    const maxY = Math.max(0, container.height - elHbase);
+
+    desiredX = Math.min(Math.max(0, desiredX), maxX);
+    desiredY = Math.min(Math.max(0, desiredY), maxY);
+
+    this.onMove.emit({ id: this.annotation().id, x: desiredX, y: desiredY });
   };
 
-  public endDrag = () => {
+  private endDrag = (ev?: PointerEvent) => {
     this.dragging = false;
-
+    if (this.captureEl && ev) {
+      try { this.captureEl.releasePointerCapture?.(ev.pointerId); } catch {}
+      this.captureEl = undefined;
+    }
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.endDrag);
   };

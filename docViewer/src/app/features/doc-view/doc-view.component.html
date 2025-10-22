@@ -2,14 +2,18 @@
   @for (page of document()?.pages; track page.pageNumber) {
     <div
       class="document-page-container"
-      [style.height.px]="(containerRects()[page.pageNumber]?.height || 800) * zoom()"
+      attr.data-page-number="{{page.pageNumber}}"
+      [style.width.px]="(baseSizes()[page.pageNumber]?.width ?? 800) * zoom()"
+      [style.height.px]="(baseSizes()[page.pageNumber]?.height ?? 1100) * zoom()"
     >
       <img
         class="page-image"
         [src]="page.imageUrl"
-        [style.transform]="'scale(' + zoom() + ')'"
+        [style.width.px]="(baseSizes()[page.pageNumber]?.width ?? 800) * zoom()"
+        [style.height.px]="(baseSizes()[page.pageNumber]?.height ?? 1100) * zoom()"
         (load)="onImageLoad(page.pageNumber, $event)"
         (pointerdown)="addAnnotation(page.pageNumber, $event)"
+        alt="page {{page.pageNumber}}"
       />
 
       @if (containerRects()) {
@@ -20,6 +24,8 @@
             [containerRect]="containerRects()[page.pageNumber]"
             (onDelete)="deleteAnnotation($event)"
             (isEditing)="isEditing($event)"
+            (onMove)="onAnnotationMove($event)"
+            (onUpdate)="onAnnotationUpdate($event)"
           ></annotation>
         }
       }
