@@ -2,8 +2,7 @@
   @for (page of document()?.pages; track page.pageNumber) {
     <div
       class="document-page-container"
-      [attr.data-page-number]="page.pageNumber"
-      [style.height.px]="((containerRects()[page.pageNumber]?.height ?? 800)) * zoom()"
+      [style.height.px]="(containerRects()[page.pageNumber]?.height || 800) * zoom()"
     >
       <img
         class="page-image"

@@ -32,7 +32,9 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
         const id = params.get('id')!;
         return this.docViewService.getDocument(id);
       }),
-      tap((res) => this.pageTitleService.setTitle(res.name)),
+      tap((res) => {
+        this.pageTitleService.setTitle(res.name);
+      }),
       shareReplay({ bufferSize: 1, refCount: true })
     )
   );
@@ -40,21 +42,17 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   public annotations = signal<Annotation[]>([]);
   public editing = signal<boolean>(false);
 
-  // baseHeights: "base" rendered height of each page (without applying zoom)
   public baseHeights = signal<Record<number, number>>({});
 
   public containerRects = computed(() => {
     const z = this.zoom();
     const rects: IContainerRect = {};
+    const pages = this.document()!.pages;
     const containers = window.document.querySelectorAll<HTMLElement>('.document-page-container');
 
-    containers.forEach((el) => {
-      const pageNumAttr = el.dataset['pageNumber'];
-      const pageNumber = pageNumAttr ? Number(pageNumAttr) : undefined;
-      if (!pageNumber) return;
+    containers.forEach((el, index) => {
       const elRect = el.getBoundingClientRect();
-      // store base (unscaled) sizes: divide by zoom so template can multiply by zoom
-      rects[pageNumber] = {
+      rects[pages[index].pageNumber] = {
         left: elRect.left,
         top: elRect.top,
         width: elRect.width / Math.max(0.0001, z),
@@ -110,7 +108,6 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public zoomIn(): void {
     this.zoom.update((value) => value + 0.1);
-    // recompute layout after zoom change to keep containerRects coherent
     setTimeout(() => this.recomputeBaseHeights(), 0);
   }
 
