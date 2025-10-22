@@ -1,7 +1,7 @@
 <div class="page-container">
   <header class="page-header">
     @if(pageTitle()) {
-      <div class="page-title">pageTitle()</div>
+      <h1 class="page-header-title">{{ pageTitle() }}</h1>
     }
 
     @if(pageHeaderControls().length > 0) {

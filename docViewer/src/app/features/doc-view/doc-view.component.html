@@ -2,6 +2,7 @@
   @for (page of document()?.pages; track page.pageNumber) {
     <div class="document-page-container">
       <img
+        class="page-image"
         [src]="page.imageUrl"
         [style.transform]="'scale(' + zoom() + ')'"
         (pointerdown)="addAnnotation(page.pageNumber, $event)"

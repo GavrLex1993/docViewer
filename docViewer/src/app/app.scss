@@ -1,7 +1,7 @@
 :host {
-  --background-color: #f0f0f0;
   --content-background: #ffffff;
   --text-color: #333;
+  --title-text-color: rgb(54, 66, 133);
   --header-height: 60px;
   --footer-height: 40px;
   --max-content-width: 800px;
@@ -11,12 +11,11 @@
   display: grid;
   grid-template-rows: var(--header-height) 1fr var(--footer-height);
   height: 100vh;
-  background-color: var(--background-color);
 }
 
 .page-header {
   display: flex;
-  justify-content: space-between; /* Элементы по краям */
+  justify-content: space-between;
   align-items: center;
   padding: 0 2rem;
   background-color: var(--content-background);
@@ -24,14 +23,20 @@
   width: 100%;
   box-sizing: border-box;
 
-  .page-header-title {
-    font-weight: bold;
-    font-size: 1.2rem;
+  h1.page-header-title {
+    font-size: 1.5em;
+    color: var(--title-text-color);
+    text-align: center;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
 
   .page-header-controls {
     display: flex;
     align-items: center;
+    justify-content: right;
     gap: 0.5rem;
   }
 }

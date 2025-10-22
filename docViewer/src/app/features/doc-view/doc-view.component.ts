@@ -1,12 +1,15 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { filter, shareReplay, switchMap } from 'rxjs';
+import { filter, shareReplay, switchMap, tap } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { DocViewService } from './doc-view.service';
 import { IDocumentData, IContainerRect } from './doc-view.entity';
 import { AnnotationComponent } from './annotation/annotation.component';
 import { Annotation, ITextAnnotation } from './annotation/annotation.entity';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { PageHeaderControlsService } from '../../core/services/page-header-controls/page-header-controls.service';
+import { IPageHeaderControl } from '../../core/services/page-header-controls/page-header-controls.entity';
 
 @Component({
   selector: 'doc-view',
@@ -15,9 +18,11 @@ import { Annotation, ITextAnnotation } from './annotation/annotation.entity';
   imports: [AnnotationComponent],
   providers: [DocViewService],
 })
-export class DocViewComponent {
+export class DocViewComponent implements OnInit {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly docViewService = inject(DocViewService, { self: true });
+  private readonly pageTitleService = inject(PageTitleService);
+  private readonly pageHeaderControlsService = inject(PageHeaderControlsService);
 
   public document = toSignal<IDocumentData>(
     this.activatedRoute.paramMap.pipe(
@@ -26,6 +31,7 @@ export class DocViewComponent {
         const id = params.get('id')!;
         return this.docViewService.getDocument(id);
       }),
+      tap((res) => this.pageTitleService.setTitle(res.name)),
       shareReplay({ bufferSize: 1, refCount: true })
     )
   );
@@ -43,6 +49,35 @@ export class DocViewComponent {
     return rects;
   });
 
+  private readonly docViewControls: IPageHeaderControl[] = [
+    {
+      type: "span",
+      content: computed(() => {
+        const res = Math.round(this.zoom() * 100).toString();
+        return res;
+      })
+    },
+    {
+      type: "button",
+      content: signal("+"),
+      onClick: () => this.zoomIn()
+    },
+    {
+      type: "button",
+      content: signal("-"),
+      onClick: () => this.zoomOut()
+    },
+    {
+      type: "button",
+      content: signal("Save"),
+      onClick: () => this.saveAnnotations()
+    }
+  ];
+
+  public ngOnInit(): void {
+    this.pageHeaderControlsService.addControls(this.docViewControls);
+  }
+
   public zoomIn(): void {
     this.zoom.update((value) => value + 0.1);
   }
@@ -57,6 +92,19 @@ export class DocViewComponent {
 
   public addAnnotation(pageNumber: number, event: MouseEvent): void {
     if (this.editing()) return;
+
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('page-image')) return;
+
+    const imgRect = target.getBoundingClientRect();
+    if (
+      event.clientX < imgRect.left ||
+      event.clientX > imgRect.right ||
+      event.clientY < imgRect.top ||
+      event.clientY > imgRect.bottom
+    ) {
+      return;
+    }
 
     // For simplicity, a browser dialog window was used.
     // Ideally, separate logic for selecting the annotation type (text, image, SVG, etc.) would be needed,
