@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { filter, shareReplay, switchMap, tap } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -17,8 +17,9 @@ import { IPageHeaderControl } from '../../core/services/page-header-controls/pag
   styleUrls: ['./doc-view.component.scss'],
   imports: [AnnotationComponent],
   providers: [DocViewService],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DocViewComponent implements OnInit {
+export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly docViewService = inject(DocViewService, { self: true });
   private readonly pageTitleService = inject(PageTitleService);
@@ -39,15 +40,34 @@ export class DocViewComponent implements OnInit {
   public annotations = signal<Annotation[]>([]);
   public editing = signal<boolean>(false);
 
+  // baseHeights: "base" rendered height of each page (without applying zoom)
+  public baseHeights = signal<Record<number, number>>({});
+
   public containerRects = computed(() => {
-    const pages = this.document()!.pages;
+    const z = this.zoom();
     const rects: IContainerRect = {};
-    const containers = window.document.querySelectorAll('.document-page-container');
-    containers.forEach((el, index) => {
-      rects[pages[index].pageNumber] = el.getBoundingClientRect();
+    const containers = window.document.querySelectorAll<HTMLElement>('.document-page-container');
+
+    containers.forEach((el) => {
+      const pageNumAttr = el.dataset['pageNumber'];
+      const pageNumber = pageNumAttr ? Number(pageNumAttr) : undefined;
+      if (!pageNumber) return;
+      const elRect = el.getBoundingClientRect();
+      // store base (unscaled) sizes: divide by zoom so template can multiply by zoom
+      rects[pageNumber] = {
+        left: elRect.left,
+        top: elRect.top,
+        width: elRect.width / Math.max(0.0001, z),
+        height: elRect.height / Math.max(0.0001, z),
+        right: elRect.right,
+        bottom: elRect.bottom,
+      } as DOMRect;
     });
+
     return rects;
   });
+
+  private resizeHandler = () => this.recomputeBaseHeights();
 
   private readonly docViewControls: IPageHeaderControl[] = [
     {
@@ -78,12 +98,49 @@ export class DocViewComponent implements OnInit {
     this.pageHeaderControlsService.addControls(this.docViewControls);
   }
 
+  public ngAfterViewInit(): void {
+    // initial calculation and watch resize to keep base heights correct
+    setTimeout(() => this.recomputeBaseHeights(), 0);
+    window.addEventListener('resize', this.resizeHandler);
+  }
+
+  public ngOnDestroy(): void {
+    window.removeEventListener('resize', this.resizeHandler);
+  }
+
   public zoomIn(): void {
     this.zoom.update((value) => value + 0.1);
+    // recompute layout after zoom change to keep containerRects coherent
+    setTimeout(() => this.recomputeBaseHeights(), 0);
   }
 
   public zoomOut(): void {
     this.zoom.update((value) => Math.max(0.1, value - 0.1));
+    setTimeout(() => this.recomputeBaseHeights(), 0);
+  }
+
+  public onImageLoad(pageNumber: number, ev: Event): void {
+    const img = ev.target as HTMLImageElement | null;
+    if (!img) return;
+    const renderedWidth = img.clientWidth;
+    if (renderedWidth <= 0 || !img.naturalWidth) return;
+    const renderedHeight = (img.naturalHeight / img.naturalWidth) * renderedWidth;
+    this.baseHeights.update(h => ({ ...h, [pageNumber]: renderedHeight }));
+  }
+
+  private recomputeBaseHeights(): void {
+    const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('.document-page-container img.page-image'));
+    const next: Record<number, number> = { ...this.baseHeights() };
+    imgs.forEach(img => {
+      const container = img.closest('.document-page-container') as HTMLElement | null;
+      const pageNumAttr = container?.dataset['pageNumber'];
+      const pageNumber = pageNumAttr ? Number(pageNumAttr) : undefined;
+      if (!pageNumber) return;
+      if (!img.naturalWidth || img.clientWidth === 0) return;
+      const h = (img.naturalHeight / img.naturalWidth) * img.clientWidth;
+      next[pageNumber] = h;
+    });
+    this.baseHeights.set(next);
   }
 
   public getPageAnnotations(pageNumber: number) {

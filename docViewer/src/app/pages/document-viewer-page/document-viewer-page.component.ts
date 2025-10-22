@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { DocViewComponent } from '../../features/doc-view/doc-view.component';
 
@@ -6,6 +6,7 @@ import { DocViewComponent } from '../../features/doc-view/doc-view.component';
   selector: 'document-viewer-page',
   templateUrl: './document-viewer-page.component.html',
   styleUrls: ['./document-viewer-page.component.scss'],
-  imports: [DocViewComponent]
+  imports: [DocViewComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DocumentViewerPageComponent {}

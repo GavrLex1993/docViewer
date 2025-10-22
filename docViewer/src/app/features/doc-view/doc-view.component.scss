@@ -15,12 +15,14 @@
     justify-content: center;
     align-items: flex-start;
     width: 100%;
+    overflow: visible;
 
     img.page-image {
       pointer-events: auto;
       transform-origin: top center;
       max-width: 100%;
       height: auto;
+      display: block;
     }
 
     annotation {

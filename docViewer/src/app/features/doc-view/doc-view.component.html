@@ -1,10 +1,15 @@
 <div class="document-container">
   @for (page of document()?.pages; track page.pageNumber) {
-    <div class="document-page-container">
+    <div
+      class="document-page-container"
+      [attr.data-page-number]="page.pageNumber"
+      [style.height.px]="((containerRects()[page.pageNumber]?.height ?? 800)) * zoom()"
+    >
       <img
         class="page-image"
         [src]="page.imageUrl"
         [style.transform]="'scale(' + zoom() + ')'"
+        (load)="onImageLoad(page.pageNumber, $event)"
         (pointerdown)="addAnnotation(page.pageNumber, $event)"
       />
 

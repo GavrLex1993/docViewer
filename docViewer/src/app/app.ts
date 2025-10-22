@@ -1,4 +1,4 @@
-import { Component, inject, Signal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Signal, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { PageTitleService } from './core/services/page-title.service';
@@ -13,7 +13,8 @@ import { PageHeaderControlsComponent } from './core/components/page-header-contr
     PageHeaderControlsComponent
   ],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App {
   private readonly pageTitleService = inject(PageTitleService);

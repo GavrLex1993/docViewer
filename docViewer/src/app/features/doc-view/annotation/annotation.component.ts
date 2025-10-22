@@ -1,4 +1,4 @@
-import { Component, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
 import { MatInput } from '@angular/material/input';
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from "@angular/material/icon";
@@ -10,7 +10,8 @@ import { Annotation } from './annotation.entity';
   selector: 'annotation',
   templateUrl: './annotation.component.html',
   styleUrls: ['./annotation.component.scss'],
-  imports: [MatInput, MatIconButton, MatIcon, MatTooltip]
+  imports: [MatInput, MatIconButton, MatIcon, MatTooltip],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnnotationComponent {
   public annotation = model.required<Annotation>();
