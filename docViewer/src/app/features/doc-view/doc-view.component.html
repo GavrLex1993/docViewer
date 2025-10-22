@@ -1,0 +1,23 @@
+<div class="document-container">
+  @for (page of document()?.pages; track page.pageNumber) {
+    <div class="document-page-container">
+      <img
+        [src]="page.imageUrl"
+        [style.transform]="'scale(' + zoom() + ')'"
+        (pointerdown)="addAnnotation(page.pageNumber, $event)"
+      />
+
+      @if (containerRects()) {
+        @for (annotation of getPageAnnotations(page.pageNumber); track annotation.id) {
+          <annotation
+            [annotation]="annotation"
+            [zoom]="zoom()"
+            [containerRect]="containerRects()[page.pageNumber]"
+            (onDelete)="deleteAnnotation($event)"
+            (isEditing)="isEditing($event)"
+          ></annotation>
+        }
+      }
+    </div>
+  }
+</div>

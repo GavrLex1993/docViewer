@@ -1,0 +1,48 @@
+:host {
+  --background-color: #f0f0f0;
+  --content-background: #ffffff;
+  --text-color: #333;
+  --header-height: 60px;
+  --footer-height: 40px;
+  --max-content-width: 800px;
+}
+
+.page-container {
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr var(--footer-height);
+  height: 100vh;
+  background-color: var(--background-color);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between; /* Элементы по краям */
+  align-items: center;
+  padding: 0 2rem;
+  background-color: var(--content-background);
+  border-bottom: 1px solid #ddd;
+  width: 100%;
+  box-sizing: border-box;
+
+  .page-header-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+
+  .page-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.page-footer {
+  background-color: var(--content-background);
+  border-top: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  gap: 0.5rem;
+}

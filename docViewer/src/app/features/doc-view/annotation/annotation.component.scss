@@ -1,0 +1,39 @@
+.annotation {
+  position: absolute;
+  background-color: rgba(255, 255, 0, 0.6);
+  color: black;
+  padding: 4px 8px;
+  border: none;
+  cursor: grab;
+  user-select: none;
+  z-index: 10;
+  font-size: 14px;
+  backdrop-filter: blur(1px);
+  max-width: 20%;
+}
+
+.annotation:active {
+  cursor: grabbing;
+}
+
+.annotation-container {
+  display: flex;
+  align-items: center;
+  height: 2rem;
+}
+
+.annotation input.annotation-input-edit {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  color: black;
+}
+
+.annotation .annotation-text {
+  width: 80%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}

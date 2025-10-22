@@ -1,0 +1,10 @@
+@for (control of pageHeaderControls(); track $index) {
+  @switch (control.type) {
+    @case ('button') {
+      <button matButton="" (click)="control.onClick?.($event)">{{ control.content() }}</button>
+    }
+    @case ('span') {
+      <span>{{ control.content() }}</span>
+    }
+  }
+}

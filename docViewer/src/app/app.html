@@ -1,0 +1,17 @@
+<div class="page-container">
+  <header class="page-header">
+    @if(pageTitle()) {
+      <div class="page-title">pageTitle()</div>
+    }
+
+    @if(pageHeaderControls().length > 0) {
+      <page-header-controls class="page-header-controls" [pageHeaderControls]="pageHeaderControls()"/>
+    }
+  </header>
+  <main class="page-content">
+    <router-outlet />
+  </main>
+  <div class="page-footer">
+    © 2025 <a href="https://github.com/GavrLex1993">GavrLex1993</a>
+  </div>
+</div>

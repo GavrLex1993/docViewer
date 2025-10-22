@@ -1,0 +1,30 @@
+<div
+  class="annotation"
+  [style.left.px]="annotation().x * zoom()"
+  [style.top.px]="annotation().y * zoom()"
+  (pointerdown)="startDrag($event)"
+  (dblclick)="toggleEdit()"
+>
+  <div class="annotation-container">
+    @if (annotation().type === 'text') {
+      @if (editing()) {
+        <input
+          matInput
+          #annotationedit=""
+          class="annotation-input-edit"
+          [value]="annotation().text"
+          (blur)="updateText($event)"
+          (keydown.enter)="updateText($event)"
+        />
+      } @else {
+        <span class="annotation-text" [matTooltip]="annotation().text" [matTooltipShowDelay]="500" [matTooltipDisabled]="dragging">{{ annotation().text }}</span>
+      }
+    }
+
+    @if (!editing()) {
+      <button matIconButton (click)="onDeleteClick(annotation().id)">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+</div>
