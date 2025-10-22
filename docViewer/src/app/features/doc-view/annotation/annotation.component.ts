@@ -34,6 +34,9 @@ export class AnnotationComponent {
   public startDrag(event: PointerEvent): void {
     if (this.editing()) return;
 
+    const tgt = event.target as HTMLElement | null;
+    if (tgt && tgt.closest('button, input, textarea, a, [role="button"]')) return;
+
     event.preventDefault();
     this.dragging = true;
 

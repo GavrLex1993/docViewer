@@ -22,7 +22,7 @@
     }
 
     @if (!editing()) {
-      <button matIconButton (click)="onDeleteClick(annotation().id)">
+      <button type="button" matIconButton (pointerdown)="$event.stopPropagation()" (click)="onDeleteClick(annotation().id); $event.stopPropagation()">
         <mat-icon>close</mat-icon>
       </button>
     }
