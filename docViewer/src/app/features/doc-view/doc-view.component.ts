@@ -115,6 +115,7 @@ export class DocViewComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.pageHeaderControlsService.clearControls();
     window.removeEventListener('resize', this.resizeHandler);
   }
 
